@@ -13,7 +13,6 @@ public class ProductRegionAnalysis {
 
   public static class RegionProductMapper extends Mapper<Object, Text, Text, Text> {
     public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
-      // Regex untuk menangani koma di dalam tanda kutip
       String[] columns = value.toString().split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
 
       if (columns.length < 8 || columns[0].equalsIgnoreCase("Invoice"))
@@ -24,7 +23,6 @@ public class ProductRegionAnalysis {
         String productName = columns[2].trim();
         String quantity = columns[3].trim();
 
-        // Key: Region, Value: NamaProduk###Quantity
         context.write(new Text(region), new Text(productName + "###" + quantity));
       } catch (Exception e) {
       }
@@ -35,7 +33,6 @@ public class ProductRegionAnalysis {
     public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
       java.util.Map<String, Integer> productCounts = new java.util.HashMap<>();
 
-      // 1. Agregasi total quantity untuk setiap produk di wilayah tersebut
       for (Text val : values) {
         String[] parts = val.toString().split("###");
         if (parts.length < 2)
@@ -49,7 +46,6 @@ public class ProductRegionAnalysis {
         }
       }
 
-      // 2. Cari produk dengan total quantity tertinggi di wilayah ini
       String topProduct = "";
       int maxQty = -1;
       for (java.util.Map.Entry<String, Integer> entry : productCounts.entrySet()) {
@@ -59,7 +55,6 @@ public class ProductRegionAnalysis {
         }
       }
 
-      // Output: Region -> Nama Produk Terlaris (Total Qty)
       context.write(key, new Text("-> " + topProduct + " (Total: " + maxQty + ")"));
     }
   }
@@ -72,12 +67,9 @@ public class ProductRegionAnalysis {
     job.setMapperClass(RegionProductMapper.class);
     job.setReducerClass(RegionProductReducer.class);
 
-    // PERBAIKAN DI SINI:
-    // Karena Mapper & Reducer mengeluarkan Text, set keduanya ke Text.class
     job.setOutputKeyClass(Text.class);
     job.setOutputValueClass(Text.class);
 
-    // Tambahan opsional untuk memastikan output Mapper terbaca benar
     job.setMapOutputKeyClass(Text.class);
     job.setMapOutputValueClass(Text.class);
 
